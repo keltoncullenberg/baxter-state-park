@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Baxter State Park</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#0b1020;font-family:ui-monospace,Menlo,Consolas,monospace;color:#e8eef7}
+  #c{display:block;width:100%;height:100%}
+  #hud{position:fixed;left:14px;top:12px;font-size:13px;line-height:1.5;text-shadow:0 1px 2px #000;pointer-events:none;white-space:pre}
+  #hud b{color:#ffd77a;font-weight:600}
+  #cross{position:fixed;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;pointer-events:none;opacity:.9}
+  #cross:before,#cross:after{content:"";position:absolute;background:#fff;mix-blend-mode:difference}
+  #cross:before{left:8px;top:0;width:2px;height:18px}#cross:after{top:8px;left:0;width:18px;height:2px}
+  #map{position:fixed;right:14px;top:12px;width:220px;height:220px;border:2px solid rgba(255,255,255,.55);border-radius:6px;background:#111}
+  #compass{position:fixed;right:14px;top:236px;width:224px;text-align:center;font-size:15px;text-shadow:0 1px 2px #000;letter-spacing:.04em}
+  #compass b{color:#ffd77a;font-size:20px}
+  #mapcap{position:fixed;right:14px;top:262px;width:224px;text-align:center;font-size:11px;opacity:.85;text-shadow:0 1px 2px #000}
+  #hot{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);display:flex;gap:6px}
+  .slot{width:46px;height:46px;border:2px solid rgba(255,255,255,.35);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;text-shadow:0 1px 2px #000;background:rgba(0,0,0,.35)}
+  .slot.sel{border-color:#ffd77a;box-shadow:0 0 0 2px rgba(255,215,122,.35)}
+  .slot i{display:block;width:24px;height:24px;border-radius:3px;margin-bottom:2px;box-shadow:inset -4px -4px 0 rgba(0,0,0,.35)}
+  #intro{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(20,40,70,.92),rgba(5,8,16,.97));display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;z-index:10}
+  #intro h1{font-size:44px;margin:0 0 6px;letter-spacing:.06em;font-weight:700}
+  #intro h2{font-size:15px;margin:0 0 26px;opacity:.75;font-weight:400;max-width:720px;line-height:1.5}
+  #intro .k{display:grid;grid-template-columns:auto auto auto auto;gap:4px 18px;text-align:left;font-size:13px;opacity:.9;margin-bottom:26px}
+  #intro .k b{color:#ffd77a}
+  #intro .go{font-size:17px;padding:12px 30px;border:2px solid #ffd77a;border-radius:8px;color:#ffd77a}
+  #intro small{margin-top:26px;opacity:.5;font-size:11px;max-width:620px;line-height:1.5}
+  #flash{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);font-size:14px;background:rgba(0,0,0,.55);padding:6px 14px;border-radius:8px;opacity:0;transition:opacity .4s;pointer-events:none}
+  #labels{display:none;position:fixed;right:14px;top:290px;width:250px;background:rgba(8,14,26,.94);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:14px 16px;z-index:20;font-size:13px}
+  #labels h3{margin:0 0 10px;color:#ffd77a;font-size:14px}
+  #labels label{display:block;padding:4px 0;cursor:pointer}
+  #labels p{opacity:.6;font-size:11px;margin:10px 0 0;line-height:1.4}
+  #route{display:none;position:fixed;left:14px;bottom:90px;width:360px;max-height:72vh;overflow:auto;background:rgba(8,14,26,.94);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:14px 16px;z-index:20;font-size:13px}
+  #route h3{margin:0 0 8px;color:#ff9ad0;font-size:14px}
+  #route ol{margin:6px 0;padding-left:20px}
+  #route li{margin:4px 0}
+  #route .sub{opacity:.65;font-size:11px}
+  #route .how{opacity:.75;font-size:11px;line-height:1.4}
+  #route .btns button{background:#2a3550;color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:4px 10px;margin-right:6px;cursor:pointer;font:inherit;font-size:12px}
+  #route .btns button:hover{background:#3b4a70}
+  #route .tot.top{position:sticky;top:-14px;background:rgba(8,14,26,.98);margin:-4px -16px 6px;padding:6px 16px 8px;border-top:0;border-bottom:1px solid rgba(255,255,255,.15)}
+  #route li{margin:2px 0;font-size:12px}
+  #route .tot{border-top:1px solid rgba(255,255,255,.15);padding-top:8px;margin:8px 0 0}
+  #load{position:fixed;left:50%;bottom:60px;transform:translateX(-50%);font-size:12px;opacity:.7}
+  #list{display:none;position:fixed;inset:40px;background:rgba(8,14,26,.94);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:18px 24px;overflow:auto;z-index:20;font-size:13px}
+  #list h3{margin:0 0 12px;color:#ffd77a}
+  #list .cols{column-width:220px;column-gap:28px}
+  #list .grp{break-inside:avoid;margin-bottom:16px}
+  #list h4{margin:0 0 4px;font-size:12px;opacity:.7;text-transform:uppercase;letter-spacing:.08em}
+  #list h4 span{opacity:.6;font-weight:400}
+  #list a{display:block;padding:2px 6px;border-radius:4px;cursor:pointer;color:#e8eef7}
+  #list a:hover{background:rgba(255,215,122,.18)}
+  #list a em{opacity:.55;font-style:normal;font-size:11px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"></div>
+<div id="cross"></div>
+<canvas id="map" width="220" height="220"></canvas>
+<div id="compass"></div>
+<div id="mapcap">N ↑ · NAIP imagery · M: zoom · L: places</div>
+<div id="hot"></div>
+<div id="flash"></div>
+<div id="list"></div>
+<div id="labels"></div>
+<div id="route"></div>
+<div id="intro">
+  <h1>BAXTER STATE PARK</h1>
+  <h2>The whole park as a 3 m block world — Katahdin and the Knife Edge, the Brothers and Coe, Doubletop, the Traveler range, the Turners, every pond, stream, trail and campground — built from USGS lidar and aerial imagery.</h2>
+  <div class="k">
+    <b>W A S D</b><span>walk</span> <b>Mouse</b><span>look</span>
+    <b>Space</b><span>jump · double-tap: start flying · hold to climb</span> <b>Shift</b><span>sprint · hold to descend · double-tap: land</span>
+    <b>F</b><span>toggle flying</span>
+    <b>Click</b><span>break block</span> <b>E</b><span>place block</span>
+    <b>1–7</b><span>choose block</span> <b>L</b><span>list of places — teleport anywhere</span>
+    <b>T</b><span>next peak</span> <b>R</b><span>back to Baxter Peak</span>
+    <b>N</b><span>choose which labels show (peaks, ponds, streams, trails, camps…)</span>
+    <b>P</b><span>route planner — click trails to measure distances (U undo · Backspace clear)</span>
+    <b>[ ]</b><span>time of day</span> <b>Y</b><span>season: summer · fall · winter · spring</span> <b>M</b><span>minimap zoom</span>
+    <b>− =</b><span>block draw distance (remembered)</span>
+  </div>
+  <div class="go">Click to start on Baxter Peak</div>
+  <small>Every block is 3 m and the whole park is blocks — 134 million columns streamed in as you move. Beyond the loaded blocks you see the real aerial photo draped on the terrain, with every trail, road, stream, pond and campground from OpenStreetMap. Elevation: USGS 3DEP. Imagery: USDA NAIP via USGS. Map data © OpenStreetMap contributors. Rendered with three.js.</small>
+  <div id="load">loading…</div>
+</div>
+<script src="three.min.js"></script>
+<script src="data/meta.js"></script>
+<script src="data/lod.js"></script>
+<script src="data/tex.js"></script>
+<script src="data/tex2.js"></script>
+<script src="data/extra_names.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
