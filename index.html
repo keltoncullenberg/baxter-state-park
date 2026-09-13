@@ -57,6 +57,12 @@
   #pview .pcap{position:fixed;left:0;right:0;bottom:0;padding:12px 20px;background:rgba(0,0,0,.7);font-size:13px;line-height:1.5;text-align:center}
   #pview .pcap span{opacity:.75;font-size:12px} #pview .pcap .hint{opacity:.5;font-size:11px} #pview a{color:#ffd77a}
   #pview .pclose{position:fixed;right:18px;top:12px;font-size:26px;cursor:pointer;opacity:.7} #pview .pclose:hover{opacity:1}
+  #toast{position:fixed;left:50%;top:18%;transform:translateX(-50%);min-width:360px;max-width:560px;background:rgba(8,14,26,.92);border:1px solid rgba(255,215,122,.55);border-radius:14px;padding:18px 26px;text-align:center;opacity:0;transition:opacity .8s;pointer-events:none;z-index:25;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+  #toast .t1{font-size:24px;color:#ffd77a;font-weight:700;letter-spacing:.02em} #toast .t2{opacity:.75;font-size:13px;margin-top:4px} #toast .t3{margin-top:12px;font-size:14px;color:#e8f0ff} #toast .t4{margin-top:6px;font-size:12px;opacity:.8} #toast .t5{margin-top:10px;font-size:11px;opacity:.55}
+  #notes{display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:520px;max-width:92vw;max-height:80vh;overflow:auto;background:rgba(8,14,26,.95);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:16px 22px;z-index:20;font-size:13px}
+  #notes h3{margin:0 0 10px;color:#ffd77a} #notes h3 span{opacity:.6;font-weight:400;font-size:12px}
+  #notes .row{padding:8px 0;border-top:1px solid rgba(255,255,255,.1)} #notes .row b{display:block;font-size:14px;opacity:.5} #notes .row.got b{opacity:1;color:#fff} #notes .row span{display:block;opacity:.7;font-size:12px} #notes .row em{display:block;font-style:normal;color:#bfe0ff;font-size:12px;margin-top:2px}
+  #notes p{opacity:.6;font-size:12px;line-height:1.5;margin:12px 0 0}
   #load{position:fixed;left:50%;bottom:60px;transform:translateX(-50%);font-size:12px;opacity:.7}
   #list{display:none;position:fixed;inset:40px;background:rgba(8,14,26,.94);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:18px 24px;overflow:auto;z-index:20;font-size:13px}
   #list h3{margin:0 0 12px;color:#ffd77a}
@@ -83,6 +89,8 @@
 <div id="route"></div>
 <div id="photos"></div>
 <div id="pview"></div>
+<div id="toast"></div>
+<div id="notes"></div>
 <div id="intro">
   <h1>BAXTER STATE PARK</h1>
   <h2>The whole park as a 3 m block world — Katahdin and the Knife Edge, the Brothers and Coe, Doubletop, the Traveler range, the Turners, every pond, stream, trail and campground — built from USGS lidar and aerial imagery.</h2>
@@ -90,13 +98,13 @@
     <b>W A S D</b><span>walk</span> <b>Mouse</b><span>look</span>
     <b>Space</b><span>jump · double-tap: start flying · hold to climb</span> <b>Shift</b><span>sprint · hold to descend · double-tap: land</span>
     <b>F</b><span>toggle flying</span>
-    <b>Click</b><span>break block</span> <b>E</b><span>place block</span>
-    <b>1–7</b><span>choose block</span> <b>L</b><span>list of places — teleport anywhere</span>
+    <b>L</b><span>list of places — teleport anywhere</span> <b>B</b><span>field notes</span>
     <b>T</b><span>next peak</span> <b>R</b><span>back to Baxter Peak</span>
     <b>N</b><span>choose which labels show (peaks, ponds, streams, trails, camps, real photos…)</span>
     <b>V</b><span>real photos taken where you're standing — fullscreen (← → to flip through)</span>
     <b>P</b><span>route planner — click trails to measure distances (U undo · Backspace clear)</span>
     <b>[ ]</b><span>time of day</span> <b>Y</b><span>season: summer · fall · winter · spring</span> <b>M</b><span>minimap zoom</span> <b>O</b><span>… find the back of the Baxter Peak sign</span>
+    <b>?</b><span>there are animals in this park, each where you would really find it. Finding one changes things.</span>
     <b>− =</b><span>block draw distance (remembered)</span>
   </div>
   <div class="go">Click to start on Baxter Peak</div>

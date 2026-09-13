@@ -34,12 +34,23 @@ core; beyond ~1 km you see the smooth terrain until you get closer.
 - **V** real photos. 300 geotagged photographs from Wikimedia Commons (mostly Famartin's 2017 Hunt Trail–Knife Edge–Helon Taylor traverse, plus Hamlin Ridge, Chimney Pond, Roaring Brook and a few historic views) are pinned where they were taken. Walk or fly near one and the four closest appear in a strip on the right, sorted by distance and by how closely the photographer was looking the way you are; an arrow points toward where each was taken. Press V (or click one) to see it fullscreen with the photographer's credit and licence; ← → flip through the others nearby. Camera markers in the world (📷, with a count) show where photos exist; turn them and the strip off under N. Photos load from Commons, so this part needs an internet connection.
 - **O** at the back of the Baxter Peak sign
 - **T** next peak · **R** back to Baxter Peak
-- **Left click** break · **Right click** place · **1–7** choose block
+- **Left click** break · **E** place · **1–7** choose block (after your first animal)
 - **[ ]** time of day · **M** minimap zoom (five levels, out to the whole park) · **Esc** release mouse
 - **− / =** block draw distance, 5–20 chunks (0.5–1.9 km). Default 10. Each step adds noticeably more geometry, so if the frame rate drops, step back down. Your choice is remembered between sessions.
 
 The HUD shows elevation, lat/lon, the nearest named place, which trail or road you're on, and
 whether you're inside the 3 m core.
+
+## Wildlife
+
+Six kinds of animal live in the park, each placed where you would really find it and re-rolled every session:
+moose on pond shores and stream margins (most of them only at dawn and dusk), black bear in the low forest,
+white-tailed deer at the forest edge near roads and trails, loons on the big ponds, ravens circling above
+treeline, snowshoe hares in the krummholz (white in winter). Get within about 25 m of one with a clear view
+and look at it: it goes into your field notes (**B**) and quietly unlocks something — painterly render mode
+(**K**), a time-lapse day (**J**), a faster sprint, a diving/swimming upgrade, double-speed flight, or a
+double jump. Digging and placing blocks are also locked until you have found your first animal; the world
+is for exploring first. Finding all six adds a line to the back of the summit sign.
 
 ## Data
 
