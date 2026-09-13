@@ -318,14 +318,18 @@ function updateLabels(){
   cands.sort((a,b)=>a[0]-b[0]);
   // line of sight: drop labels hidden behind terrain (sampled against the smooth height field)
   const cx=camera.position.x, cy=camera.position.y, cz=camera.position.z; const show=[];
-  for (const c of cands){ if (show.length>=90) break; const d=c[1]; const tx=d.x, tz=d.z, ty=hAt(Math.round(tx),Math.round(tz))+d.lift+0.5;
-    const n=Math.min(80, Math.max(12, Math.floor(c[0]/12))); let hidden=false;
-    for (let i=1;i<n;i++){ const t=i/n; if (t<0.04) continue; const x=cx+(tx-cx)*t, z=cz+(tz-cz)*t, y=cy+(ty-cy)*t; if (lodH(x,z)-2 > y){ hidden=true; break; } }
-    if (!hidden) show.push(c); }
+  const recheck=(labelTick&3)===0;
+  for (const c of cands){ if (show.length>=90) break; const d=c[1]; if (!recheck){ if (d.vis) show.push(c); continue; } const tx=d.x, tz=d.z, ty=hAt(Math.round(tx),Math.round(tz))+d.lift+0.5;
+    // march from 2 blocks in front of the camera to the label; real block heights where tiles are loaded, smooth terrain beyond
+    const len=Math.hypot(tx-cx, ty-cy, tz-cz); const n=Math.min(220, Math.max(12, Math.floor(len/4))); let hidden=false; const t0=Math.min(0.5, 2/len);
+    for (let i=1;i<n;i++){ const t=i/n; if (t<t0) continue; const x=cx+(tx-cx)*t, z=cz+(tz-cz)*t, y=cy+(ty-cy)*t;
+      const xi=Math.floor(x), zi=Math.floor(z); const tl=inCore(xi,zi)?tileOf(xi,zi):null; const h=(tl&&tl.state==='ready') ? tl.h[((zi&255)<<8)|(xi&255)]+1 : lodH(x,z)-1;
+      if (h > y){ hidden=true; break; } }
+    d.vis=!hidden; if (!hidden) show.push(c); }
   const keep=new Set();
   for (const [dist,d] of show){ const s=spriteFor(d); keep.add(s); s.visible=true; s.userData.last=labelTick;
     const x=Math.round(d.x), z=Math.round(d.z); s.position.set(d.x, hAt(x,z)+d.lift, d.z);
-    const k=Math.min(Math.max(CATS[d.cat].min||1.2, camera.position.distanceTo(s.position)*CATS[d.cat].size), 400); s.scale.set(k*8, k, 1); }
+    const k=Math.min(Math.max(CATS[d.cat].min||0.7, camera.position.distanceTo(s.position)*CATS[d.cat].size), 400); s.scale.set(k*8, k, 1); }
   for (const [d,s] of spriteCache){ if (!keep.has(s)){ s.visible=false; if (labelTick-s.userData.last>600){ scene.remove(s); s.material.map.dispose(); s.material.dispose(); spriteCache.delete(d); } } }
 }
 // toggle panel (N)
@@ -377,7 +381,7 @@ function makeSign(L,x,z){
   const bk=new THREE.Mesh(new THREE.PlaneGeometry(2.6,1.3),bmat); bk.position.z=-0.03; bk.rotation.y=Math.PI; grp.add(bk);
   if (/baxter/i.test(L.name)) eggSign={x:x+0.5, z:z+0.5, grp};
   const dirs=[[1,0],[-1,0],[0,1],[0,-1]]; let best=dirs[0],bh=1e9; for (const d of dirs){ const hh=hAt(x+d[0]*4,z+d[1]*4); if(hh<bh){bh=hh;best=d;} }
-  if (/baxter/i.test(L.name)) best=[-1,0];   // the real sign greets hikers arriving on the Hunt Trail / AT from the west; the note is on its back, facing the Knife Edge
+  if (/baxter/i.test(L.name)) best=[0,1];   // the real sign faces south: reading the 'Northern Terminus' side you look north, with Hamlin Peak behind it; the note is on its back
   grp.rotation.y=Math.atan2(best[0],best[1]); scene.add(grp);
   const post=new THREE.Mesh(new THREE.BoxGeometry(0.16,2.1,0.16),new THREE.MeshLambertMaterial({color:0x6a4a2a})); post.position.set(x+0.5,h+1.0,z+0.5); scene.add(post);
 }
@@ -495,7 +499,7 @@ function updateHUD(){
 let dayT=0.34; const skyDay=new THREE.Color(0x8fbfe8),skyDusk=new THREE.Color(0xe08a5a),skyNight=new THREE.Color(0x0a1022),fogDay=new THREE.Color(0xd6e6f7),fogNight=new THREE.Color(0x0e1626);
 function updateSky(){
   const a=dayT*Math.PI*2-Math.PI/2, sunEl=Math.sin(a);
-  sun.position.set(player.x+Math.sin(dayT*Math.PI*2+Math.PI)*300, player.y+Math.max(-40,sunEl*300), player.z-Math.cos(dayT*Math.PI*2+Math.PI)*120);
+  sun.position.set(player.x-Math.sin(dayT*Math.PI*2+Math.PI)*300, player.y+Math.max(-40,sunEl*300), player.z+Math.cos(dayT*Math.PI*2+Math.PI)*120);   // rises in the east (+x), stands south (+z) at noon, sets in the west
   sun.target.position.set(player.x,player.y,player.z); sun.target.updateMatrixWorld();
   const day=Math.max(0,Math.min(1,(sunEl+0.08)/0.35)), dusk=Math.max(0,1-Math.abs(sunEl)/0.18);
   const zen=skyNight.clone().lerp(new THREE.Color(0x2f6fc8),day); const hor=fogNight.clone().lerp(fogDay,day).lerp(skyDusk,dusk*0.55);
@@ -523,6 +527,7 @@ function buildList(){
 }
 function toggleList(v){ listOpen=v===undefined?!listOpen:v; list.style.display=listOpen?'block':'none'; if(listOpen) document.exitPointerLock(); }
 function goTo(L){ const x=Math.round(L.x), z=Math.round(L.y); player.x=x+0.5; player.z=z+0.5; player.y=lodH(player.x,player.z)+8; player.fly=true; player.pitch=-0.35; player.vx=player.vy=player.vz=0; updateChunks(player.x,player.z); pendingSnap={x,z,tries:0,hover:true}; }
+function highestNear(x,z,r){ let bh=-1,bx=x,bz=z; for (let dx=-r;dx<=r;dx++) for (let dz=-r;dz<=r;dz++){ const hh=hAt(x+dx,z+dz); if (hh>bh){ bh=hh; bx=x+dx; bz=z+dz; } } return [bx,bz]; }
 let pendingSnap=null;   // after teleport, snap onto blocks once tiles have arrived
 const signsPending=META.landmarks.filter(L=>L.kind==='peak' && /^(Baxter Peak|Pamola)$/i.test(L.name));
 
@@ -740,8 +745,8 @@ document.addEventListener('pointerlockchange',()=>{ if(document.pointerLockEleme
 intro.addEventListener('click',()=>{ if(running) canvas.requestPointerLock(); });
 
 function spawn(){ const bax=META.landmarks.find(l=>/^Baxter Peak$/i.test(l.name)); const pam=META.landmarks.find(l=>/^Pamola$/i.test(l.name));
-  const x=Math.round(bax.x)-2, z=Math.round(bax.y)+1; player.x=x+0.5; player.z=z+0.5; player.y=lodH(player.x,player.z)+3; player.fly=false;
-  player.yaw=pam?Math.atan2(-(pam.x-player.x),-(pam.y-player.z)):-Math.PI/2; player.pitch=-0.12; updateChunks(player.x,player.z); pendingSnap={x,z,tries:0}; }
+  const x=Math.round(bax.x), z=Math.round(bax.y)+6; player.x=x+0.5; player.z=z+0.5; player.y=lodH(player.x,player.z)+3; player.fly=false;
+  player.yaw=0; player.pitch=0.02; updateChunks(player.x,player.z); pendingSnap={x,z,tries:0,summit:true}; }
 
 // ---------- main loop ------------------------------------------------------------------------------
 let last=performance.now();
@@ -749,8 +754,8 @@ function frame(){
   requestAnimationFrame(frame);
   const now=performance.now(); let dt=(now-last)/1000; last=now; if(dt>0.05)dt=0.05;
   fcount++; ftime+=dt; if(ftime>0.5){fps=Math.round(fcount/ftime);fcount=0;ftime=0;}
-  for (let i=signsPending.length-1;i>=0;i--){ const L=signsPending[i]; const x=Math.round(L.x), z=Math.round(L.y); const tl=tileOf(x,z); if(tl&&tl.state==='ready'){ makeSign(L,x,z); markDirty(x,0,z); signsPending.splice(i,1); } }
-  if (pendingSnap){ const {x,z}=pendingSnap; const tl=tileOf(x,z); if (!inCore(x,z)) pendingSnap=null; else if (tl&&tl.state==='ready'){ if (pendingSnap.hover){ player.y=hAt(x,z)+8; player.fly=true; } else placeOnTop(x,z); pendingSnap=null; } else if (++pendingSnap.tries>600) pendingSnap=null; else { player.vy=0; } }
+  for (let i=signsPending.length-1;i>=0;i--){ const L=signsPending[i]; let x=Math.round(L.x), z=Math.round(L.y); const tl=tileOf(x,z); if(tl&&tl.state==='ready'){ [x,z]=highestNear(x,z,6); /* the sign stands on the very highest block */ makeSign(L,x,z); markDirty(x,0,z); signsPending.splice(i,1); } }
+  if (pendingSnap){ const {x,z}=pendingSnap; const tl=tileOf(x,z); if (!inCore(x,z)) pendingSnap=null; else if (tl&&tl.state==='ready'){ if (pendingSnap.hover){ player.y=hAt(x,z)+8; player.fly=true; } else if (pendingSnap.summit){ const [sx,sz]=highestNear(x,z-6,6); placeOnTop(sx,sz+6); player.yaw=0; } else placeOnTop(x,z); pendingSnap=null; } else if (++pendingSnap.tries>600) pendingSnap=null; else { player.vy=0; } }
   step(dt); dayT=(dayT+dt/1200)%1;
   const pcx=Math.floor(player.x/CH), pcz=Math.floor(player.z/CH);
   if (pcx!==frame.lcx||pcz!==frame.lcz||dirty.size){ updateChunks(player.x,player.z); frame.lcx=pcx; frame.lcz=pcz; }
@@ -780,6 +785,6 @@ function frame(){
   load.textContent='streaming the summit…';
   const t0=performance.now(); while (performance.now()-t0<12000){ updateChunks(player.x,player.z); pumpQueue(200); await new Promise(r=>setTimeout(r,30)); if (chunks.size>60) break; }
   load.textContent='ready'; running=true; last=performance.now(); frame();
-  window.__game={player,chunks,tiles,spawn,placeOnTop,goTo,raycast,typeAt,hAt,tAt,lodH,META,setDay:t=>{dayT=t;},updateChunks,pumpQueue,graph,routeClick,route,nearestTrailPoint,groundHit,__rebuild:rebuildRoute,elevProfile,get nearPhotos(){return nearPhotos;},get eggSign(){return eggSign;},setSeason:s=>{season=s; for (const k of chunks.keys()) dirty.add(k); updateChunks(player.x,player.z);},get season(){return season;}};
+  window.__game={player,chunks,tiles,spawn,placeOnTop,goTo,raycast,typeAt,hAt,tAt,lodH,META,setDay:t=>{dayT=t;},updateChunks,pumpQueue,graph,routeClick,route,nearestTrailPoint,groundHit,__rebuild:rebuildRoute,elevProfile,get nearPhotos(){return nearPhotos;},get eggSign(){return eggSign;},T,setSeason:s=>{season=s; for (const k of chunks.keys()) dirty.add(k); updateChunks(player.x,player.z);},get season(){return season;}};
 })();
 })();

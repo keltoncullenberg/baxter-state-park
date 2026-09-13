@@ -8,6 +8,12 @@ out=[]; skipped=collections.Counter()
 for p in P:
     t=p['title'][5:]
     if p['mime']!='image/jpeg': skipped['tiff']+=1; continue
+    # 1) only photographers whose Commons uploads here are landscape photography of the park
+    if p['artist'].split(' ')[0] not in ('Famartin','Fredlyfish4','Spenceregan7','Michael'): skipped['artist']+=1; continue
+    # 2) the title itself must name a place in the park
+    if not re.search(r'Katahdin|Baxter|Knife Edge|Pamola|Hamlin|Chimney|Trail|Peak|Pond|Basin|Brook|Ridge|Tableland|Saddle|Cathedral|Hunt|Abol|Helon|Roaring|Russell|Traveler|Doubletop|Coe|Brothers|OJI|Turner|Nesowadnehunk|Kidney|Daicey|Sandy Stream|Wassataquoik|Togue|Trout|Grand Falls|Caribou Spring|Katahdin Stream', t, re.I): skipped['not-a-place']+=1; continue
+    # 3) and not be a close-up of the ground, a plant, a plaque, a person or an old print
+    if re.search(r'Noah Dines|plaque|Survey marker|Stunted|Sheep Laurel|Spruce|witch|^Lake|Hinds|Northeast Piscataquis|Close up|Clinton|HRC|Entoloma|Moose', t, re.I): skipped['detail']+=1; continue
     if re.search(r'ISS0|View of Earth|panoramio\.jpg$|\bmap\b|Map of|\.svg|USGS', t) and 'panoramio' not in t: skipped['sat/map']+=1; continue
     if 'Earth Science' in p['artist'] or 'NOAA' in p['artist'] or 'State Department' in p['artist']: skipped['agency']+=1; continue
     e,n=tr.transform(p['lon'],p['lat']); bx=(e-E0)/B; bz=(N1-n)/B
@@ -20,6 +26,7 @@ for p in P:
         if hdg is None:
             # forms like "north-northeast"
             hdg=DIRS.get(d.replace('--','-'))
+    # keep photos of the view (and summit signs/cairns); drop ground-level detail shots, plants, fungi, people
     pano='anoram' in t or p['w']>2.6*p['h']
     if 'ull 360' in t: hdg=None
     # short caption
@@ -34,4 +41,4 @@ print(sum(1 for o in out if o['hdg'] is not None),'with heading;',sum(1 for o in
 meta=open('site3/data/meta.js').read(); lm=json.loads(re.search(r'"landmarks":(\[.*?\])\s*,\s*"[a-z]',meta,re.S).group(1)) if False else None
 open('site3/data/photos.js','w').write('window.PHOTOS='+json.dumps(out,separators=(',',':'))+';\n')
 import os; print(os.path.getsize('site3/data/photos.js')//1024,'KB')
-for o in out[::25]: print(o['x'],o['z'],o['hdg'],o['cap'][:80])
+
