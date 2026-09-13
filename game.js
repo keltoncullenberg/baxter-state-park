@@ -365,6 +365,19 @@ function signBackCanvas(){
   g.font='22px ui-monospace, Menlo, monospace'; g.fillStyle='#c9b98f'; g.fillText('Portland, Maine · scan, or press O here',tx,y+64);
   return c;
 }
+// The real Baxter Peak sign, line for line (elevation 5267 ft as painted on the sign; distances as on the current sign)
+function baxterSignFront(c){
+  const g=c.getContext('2d'); g.fillStyle='#5a3d22'; g.fillRect(0,0,1024,512); g.fillStyle='#4a3019'; for(let i=0;i<8;i++) g.fillRect(0,i*64+58,1024,6);
+  g.strokeStyle='#e8d8b0'; g.lineWidth=10; g.strokeRect(24,24,976,464); g.fillStyle='#f3e7c6'; g.textAlign='center'; g.textBaseline='middle';
+  g.font='bold 92px ui-monospace, Menlo, monospace'; g.fillText('KATAHDIN',512,92);
+  g.font='bold 38px ui-monospace, Menlo, monospace'; g.fillText('BAXTER PEAK - ELEVATION - 5267 FT.',512,164);
+  g.font='bold 30px ui-monospace, Menlo, monospace'; g.fillText('NORTHERN TERMINUS OF THE APPALACHIAN TRAIL',512,212);
+  g.font='21px ui-monospace, Menlo, monospace'; g.fillText('A MOUNTAIN FOOTPATH EXTENDING OVER 2000 MILES TO SPRINGER MTN. GEORGIA',512,250);
+  const rows=[['THOREAU SPRING','1.0 M.'],['KATAHDIN STREAM CAMPGROUND','5.2'],['PENOBSCOT WEST BRANCH AT ABOL BRIDGE','15.1'],['MAINE-NEW HAMPSHIRE STATE LINE','281.4'],['MT. WASHINGTON, N.H.','332.5'],['SPRINGER MTN., GEORGIA','2178.3']];
+  g.font='bold 24px ui-monospace, Menlo, monospace'; let y=296;
+  for (const [n,d] of rows){ g.textAlign='left'; g.fillText('\u2190  '+n,72,y); g.textAlign='right'; g.fillText(d,952,y); y+=32; }
+  g.textAlign='center'; g.font='22px ui-monospace, Menlo, monospace'; g.fillStyle='#d8c8a0'; g.fillText('BAXTER STATE PARK',512,y-4);
+}
 function makeSign(L,x,z){
   const h=hAt(x,z); signposts.set(x+','+z,L);
   const ft=L.ele?Math.round(+L.ele*3.28084):Math.round((h*BLOCK_M+BASE_M)*3.28084);
@@ -375,6 +388,7 @@ function makeSign(L,x,z){
   g.fillStyle='#5a3d22'; g.fillRect(0,0,1024,512); g.fillStyle='#4a3019'; for(let i=0;i<8;i++) g.fillRect(0,i*64+58,1024,6);
   g.strokeStyle='#e8d8b0'; g.lineWidth=10; g.strokeRect(24,24,976,464); g.fillStyle='#f3e7c6'; g.textAlign='center'; g.textBaseline='middle';
   const sizes=[86,64,44,44]; let y=120; lines.forEach((t,i)=>{ g.font='bold '+(sizes[i]||44)+'px ui-monospace, Menlo, monospace'; g.fillText(t,512,y); y+=i===0?110:(i===1?95:60); });
+  if (/baxter/i.test(L.name)) baxterSignFront(c);
   const mat=new THREE.MeshLambertMaterial({map:new THREE.CanvasTexture(c)}); const grp=new THREE.Group(); grp.position.set(x+0.5,h+2.7,z+0.5);
   const f=new THREE.Mesh(new THREE.PlaneGeometry(2.6,1.3),mat); f.position.z=0.03; grp.add(f);
   const bmat = /baxter/i.test(L.name) ? new THREE.MeshLambertMaterial({map:new THREE.CanvasTexture(signBackCanvas())}) : mat;
