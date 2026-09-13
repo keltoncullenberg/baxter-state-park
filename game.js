@@ -306,7 +306,7 @@ function spriteFor(d){
   g.font='bold 30px ui-monospace, Menlo, monospace'; g.textAlign='center'; g.textBaseline='middle';
   let w=g.measureText(text).width; if (w>490){ g.font='bold 24px ui-monospace, Menlo, monospace'; }
   g.lineWidth=6; g.strokeStyle='rgba(0,0,0,0.85)'; g.strokeText(text,256,32); g.fillStyle=C.color; g.fillText(text,256,32);
-  s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false,transparent:true})); s.center.set(0.5,0); s.userData.def=d; s.userData.last=0;
+  s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:true,depthWrite:false,transparent:true})); s.center.set(0.5,0); s.userData.def=d;   // depth-tested: blocks, cairns, signs and the far terrain hide labels behind them s.userData.last=0;
   scene.add(s); spriteCache.set(d,s); return s;
 }
 let labelTick=0;
@@ -328,7 +328,7 @@ function updateLabels(){
     d.vis=!hidden; if (!hidden) show.push(c); }
   const keep=new Set();
   for (const [dist,d] of show){ const s=spriteFor(d); keep.add(s); s.visible=true; s.userData.last=labelTick;
-    const x=Math.round(d.x), z=Math.round(d.z); s.position.set(d.x, hAt(x,z)+d.lift, d.z);
+    const x=Math.round(d.x), z=Math.round(d.z); const tt=tAt(x,z); s.position.set(d.x, hAt(x,z)+d.lift+((tt===T.FOREST||tt===T.BOG)?5:0), d.z);
     const k=Math.min(Math.max(CATS[d.cat].min||0.7, camera.position.distanceTo(s.position)*CATS[d.cat].size), 400); s.scale.set(k*8, k, 1); }
   for (const [d,s] of spriteCache){ if (!keep.has(s)){ s.visible=false; if (labelTick-s.userData.last>600){ scene.remove(s); s.material.map.dispose(); s.material.dispose(); spriteCache.delete(d); } } }
 }
@@ -623,7 +623,7 @@ function ribbon(pts, width, lift, color){
   return new THREE.Mesh(g,new THREE.MeshBasicMaterial({color, side:THREE.DoubleSide, depthTest:false, transparent:true, opacity:0.9}));
 }
 function textSprite(text, color, scale){ const c=document.createElement('canvas'); c.width=256; c.height=64; const g=c.getContext('2d'); g.font='bold 34px ui-monospace, Menlo, monospace'; g.textAlign='center'; g.textBaseline='middle'; g.lineWidth=6; g.strokeStyle='rgba(0,0,0,.85)'; g.strokeText(text,128,32); g.fillStyle=color; g.fillText(text,128,32);
-  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false,transparent:true})); s.center.set(0.5,0); s.userData.base=scale; return s; }
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:true,depthWrite:false,transparent:true})); s.center.set(0.5,0); s.userData.base=scale; return s; }
 function rebuildRoute(){
   clearRouteMesh(); route.legs=[]; route.total=0;
   for (let i=1;i<route.waypoints.length;i++){ let r=routeBetween(route.waypoints[i-1], route.waypoints[i]);
