@@ -374,9 +374,9 @@ function signBackCanvas(){
   for (let r=0;r<N;r++){ const bits=parseInt(QR[r],16); for (let k=0;k<N;k++) if (bits & (1<<(N-1-k))) g.fillRect(qx+k*cell, qy+r*cell, cell, cell); }
   routed(g,'BUILT BY',W/2,96,56,'center'); routed(g,'STEADY STATE',W/2,170,84,'center');
   const tx=100, tw=qx-18-tx-36; g.font='400 30px '+SIGN_FONT; try{ g.letterSpacing='1px'; }catch(e){}
-  const wrap=(t,y,lh)=>{ const words=t.split(' '); let line=''; for (const w of words){ const test=line?line+' '+w:w; g.font='400 30px '+SIGN_FONT; if (g.measureText(test).width>tw && line){ routed(g,line,tx,y,30,'left','400'); y+=lh; line=w; } else line=test; } if (line){ routed(g,line,tx,y,30,'left','400'); y+=lh; } return y; };
+  const wrap=(t,y,lh,sz)=>{ sz=sz||30; const words=t.split(' '); let line=''; for (const w of words){ const test=line?line+' '+w:w; g.font='400 '+sz+'px '+SIGN_FONT; if (g.measureText(test).width>tw && line){ routed(g,line,tx,y,sz,'left','400'); y+=lh; line=w; } else line=test; } if (line){ routed(g,line,tx,y,sz,'left','400'); y+=lh; } return y; };
   let y=wrap('If you’re exploring this world because you have an injury and can’t go here in real life, the physical therapists at Steady State can help.',260,40);
-  routed(g,'steadystatehealth.com',tx,y+34,38,'left','500'); routed(g,'PORTLAND, MAINE \u00b7 SCAN, OR PRESS O',tx,y+90,22,'left','400');
+  routed(g,'steadystatehealth.com',tx,y+34,38,'left','500'); y=wrap('Helping runners and active adults in Portland, Maine and virtually around the world.',y+78,28,22); routed(g,'SCAN, OR PRESS O',tx,y+4,20,'left','400');
   return c;
 }
 function makeSign(L,x,z){
