@@ -377,6 +377,7 @@ function makeSign(L,x,z){
   const bk=new THREE.Mesh(new THREE.PlaneGeometry(2.6,1.3),bmat); bk.position.z=-0.03; bk.rotation.y=Math.PI; grp.add(bk);
   if (/baxter/i.test(L.name)) eggSign={x:x+0.5, z:z+0.5, grp};
   const dirs=[[1,0],[-1,0],[0,1],[0,-1]]; let best=dirs[0],bh=1e9; for (const d of dirs){ const hh=hAt(x+d[0]*4,z+d[1]*4); if(hh<bh){bh=hh;best=d;} }
+  if (/baxter/i.test(L.name)) best=[-1,0];   // the real sign greets hikers arriving on the Hunt Trail / AT from the west; the note is on its back, facing the Knife Edge
   grp.rotation.y=Math.atan2(best[0],best[1]); scene.add(grp);
   const post=new THREE.Mesh(new THREE.BoxGeometry(0.16,2.1,0.16),new THREE.MeshLambertMaterial({color:0x6a4a2a})); post.position.set(x+0.5,h+1.0,z+0.5); scene.add(post);
 }
