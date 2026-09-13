@@ -363,20 +363,20 @@ function baxterSignFront(c){
   routed(g,'KATAHDIN',W/2,110,150,'center','500');
   routed(g,'BAXTER PEAK',W*0.30,222,40,'center'); routed(g,'ELEVATION 5267 FT.',W*0.68,222,40,'center');
   routed(g,'NORTHERN TERMINUS OF THE',W/2,300,42,'center'); routed(g,'APPALACHIAN TRAIL',W/2,352,46,'center');
-  const rows=[['↑','PAMOLA PEAK via KNIFE EDGE','1.1 MI.'],['↑','CHIMNEY POND CAMPGROUND via SADDLE','2.2'],['↑','ROARING BROOK CAMPGROUND via SADDLE','5.5'],['←','KATAHDIN STREAM CAMPGROUND','5.2'],['←','ABOL CAMPGROUND','4.4'],['←','SPRINGER MOUNTAIN, GEORGIA via the A.T.','2,189.1']];
+  const rows=[['→','PAMOLA PEAK via KNIFE EDGE','1.1 MI.'],['↑','CHIMNEY POND CAMPGROUND via SADDLE','2.2'],['↑','ROARING BROOK CAMPGROUND via SADDLE','5.5'],['←','KATAHDIN STREAM CAMPGROUND','5.2'],['←','ABOL CAMPGROUND','4.4'],['←','SPRINGER MOUNTAIN, GEORGIA via the A.T.','2,189.1']];
   let y=430; for (const [a,n,d] of rows){ routed(g,a,112,y,30,'center'); routed(g,n,140,y,29,'left'); routed(g,d,W-96,y,29,'right'); y+=44; }
   routed(g,'BAXTER STATE PARK',W/2,H-52,32,'center');
 }
 function signBackCanvas(){
   const c=document.createElement('canvas'); c.width=1024; c.height=800; const W=1024,H=800; const g=c.getContext('2d'); woodBoard(g,W,H);
-  const N=QR.length, cell=12, size=N*cell, qx=W-56-size-24, qy=H/2-size/2+40;
+  const N=QR.length, cell=9, size=N*cell, qx=W-72-size, qy=H/2-size/2+60;
   g.fillStyle='#f2efe6'; g.fillRect(qx-18,qy-18,size+36,size+36); g.fillStyle='#2a1a0c';
   for (let r=0;r<N;r++){ const bits=parseInt(QR[r],16); for (let k=0;k<N;k++) if (bits & (1<<(N-1-k))) g.fillRect(qx+k*cell, qy+r*cell, cell, cell); }
-  routed(g,'THIS WORLD WAS BUILT BY',W/2,96,52,'center'); routed(g,'STEADY STATE',W/2,160,70,'center');
-  const tx=100, tw=qx-18-tx-30; g.font='400 30px '+SIGN_FONT; try{ g.letterSpacing='1px'; }catch(e){}
+  routed(g,'BUILT BY',W/2,96,56,'center'); routed(g,'STEADY STATE',W/2,170,84,'center');
+  const tx=100, tw=qx-18-tx-36; g.font='400 30px '+SIGN_FONT; try{ g.letterSpacing='1px'; }catch(e){}
   const wrap=(t,y,lh)=>{ const words=t.split(' '); let line=''; for (const w of words){ const test=line?line+' '+w:w; g.font='400 30px '+SIGN_FONT; if (g.measureText(test).width>tw && line){ routed(g,line,tx,y,30,'left','400'); y+=lh; line=w; } else line=test; } if (line){ routed(g,line,tx,y,30,'left','400'); y+=lh; } return y; };
-  let y=wrap('If you’re exploring this world because you have an injury and can’t go there in real life, the physical therapists at Steady State can help.',260,40);
-  routed(g,'steadystatehealth.com',tx,y+34,38,'left','500'); routed(g,'PORTLAND, MAINE · SCAN, OR PRESS O HERE',tx,y+92,24,'left','400');
+  let y=wrap('If you’re exploring this world because you have an injury and can’t go here in real life, the physical therapists at Steady State can help.',260,40);
+  routed(g,'steadystatehealth.com',tx,y+34,38,'left','500'); routed(g,'PORTLAND, MAINE \u00b7 SCAN, OR PRESS O',tx,y+90,22,'left','400');
   return c;
 }
 function makeSign(L,x,z){
@@ -390,13 +390,24 @@ function makeSign(L,x,z){
   g.strokeStyle='#e8d8b0'; g.lineWidth=10; g.strokeRect(24,24,976,464); g.fillStyle='#f3e7c6'; g.textAlign='center'; g.textBaseline='middle';
   const sizes=[86,64,44,44]; let y=120; lines.forEach((t,i)=>{ g.font='bold '+(sizes[i]||44)+'px ui-monospace, Menlo, monospace'; g.fillText(t,512,y); y+=i===0?110:(i===1?95:60); });
   const isBax=/baxter/i.test(L.name); if (isBax) baxterSignFront(c);
-  const SW=isBax?2.4:2.6, SH=isBax?1.875:1.3, CY=isBax?2.6:2.7;   // board centre CY blocks above the summit block
-  const mat=new THREE.MeshLambertMaterial({map:new THREE.CanvasTexture(c)}); const grp=new THREE.Group(); grp.position.set(x+0.5,h+CY,z+0.5);
-  const f=new THREE.Mesh(new THREE.PlaneGeometry(SW,SH),mat); f.position.z=0.03; grp.add(f);
-  const bmat = isBax ? new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(signBackCanvas())}) : mat;   // unlit so the note reads even though the north face is in shade
-  const bk=new THREE.Mesh(new THREE.PlaneGeometry(SW,SH),bmat); bk.position.z=-0.03; bk.rotation.y=Math.PI; grp.add(bk);
-  if (isBax){ const pm=new THREE.MeshLambertMaterial({color:0x9a9488}); const top=CY+SH/2+0.45, len=top-1;   // grey posts from just above the ground to a little above the board
-    for (const sx of [-1,1]){ const post=new THREE.Mesh(new THREE.BoxGeometry(0.16,len,0.16),pm); post.position.set(sx*(SW/2-0.1), (1+top)/2-CY, -0.07); grp.add(post); } }
+  const mat=new THREE.MeshLambertMaterial({map:new THREE.CanvasTexture(c)}); const grp=new THREE.Group();
+  if (!isBax){
+    grp.position.set(x+0.5,h+2.7,z+0.5);
+    const f=new THREE.Mesh(new THREE.PlaneGeometry(2.6,1.3),mat); f.position.z=0.03; grp.add(f);
+    const bk=new THREE.Mesh(new THREE.PlaneGeometry(2.6,1.3),mat); bk.position.z=-0.03; bk.rotation.y=Math.PI; grp.add(bk);
+  } else {
+    // A-frame like the real summit sign: two pairs of grey legs meeting above the board, a top rail, board hung on the front legs
+    const SW=2.8, SH=2.2, yb=1.15, yc=yb+SH/2, apex=yb+SH+0.55, d=0.6;        // heights above the summit surface (h+1); the rock-pile block occupies 0..1
+    grp.position.set(x+0.5,h+1,z+0.5);
+    const legLen=Math.hypot(apex,d), a=Math.atan2(d,apex); const pm=new THREE.MeshLambertMaterial({color:0x9a9488});
+    for (const sx of [-1,1]) for (const sz of [-1,1]){ const leg=new THREE.Mesh(new THREE.BoxGeometry(0.16,legLen,0.16),pm); leg.position.set(sx*(SW/2+0.02), apex/2, sz*d/2); leg.rotation.x=-sz*a; grp.add(leg); }
+    const rail=new THREE.Mesh(new THREE.BoxGeometry(SW+0.36,0.14,0.16),pm); rail.position.set(0,apex-0.05,0); grp.add(rail);
+    const zc=d*(apex-yc)/apex;                                                       // where the front legs are at board height
+    const board=new THREE.Group(); board.position.set(0,yc,zc+0.06); board.rotation.x=-a; grp.add(board);   // leans back with the front legs
+    const f=new THREE.Mesh(new THREE.PlaneGeometry(SW,SH),mat); f.position.z=0.04; board.add(f);
+    const bmat=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(signBackCanvas())});   // unlit so the note reads even though the north face is in shade
+    const bk=new THREE.Mesh(new THREE.PlaneGeometry(SW,SH),bmat); bk.position.z=-0.04; bk.rotation.y=Math.PI; board.add(bk);
+  }
   if (/baxter/i.test(L.name)) eggSign={x:x+0.5, z:z+0.5, grp};
   const dirs=[[1,0],[-1,0],[0,1],[0,-1]]; let best=dirs[0],bh=1e9; for (const d of dirs){ const hh=hAt(x+d[0]*4,z+d[1]*4); if(hh<bh){bh=hh;best=d;} }
   if (/baxter/i.test(L.name)) best=[0,1];   // the real sign faces south: reading the 'Northern Terminus' side you look north, with Hamlin Peak behind it; the note is on its back
