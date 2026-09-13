@@ -275,6 +275,7 @@ const CATS = {
   roads:  {label:'Roads',                 color:'#e8dcc0', icon:'═', range:900,  size:0.045},
   camps:  {label:'Campgrounds, lean-tos & trailheads', color:'#f4f4f4', icon:'⌂', range:1000, size:0.05},
   terrain:{label:'Ridges, cliffs, viewpoints & places', color:'#d8c8ff', icon:'◆', range:1600, size:0.05},
+  photos: {label:'Real photos (markers + side panel)', color:'#ffffff', icon:'📷', range:1200, size:0.03, min:0.4},
 };
 const KIND2CAT={peak:'peaks',water:'water',waterfall:'streams',spring:'streams',camp_site:'camps',camp_pitch:'camps',shelter:'camps',wilderness_hut:'camps',alpine_hut:'camps',ranger_station:'camps',building:'camps',picnic_site:'camps',trailhead:'camps',parking:'camps',canoe:'camps',information:'camps',terrain:'terrain',place:'terrain',viewpoint:'terrain'};
 const labelDefs=[]; const catOn={}; for (const k in CATS) catOn[k]=k!=='roads';
@@ -293,6 +294,9 @@ function buildLabelDefs(){
         const d={name:f.name, cat, x, z, lift:3}; placed.push(d); labelDefs.push(d); } }
   };
   addLinear(META.trails,'trails',450); addLinear(META.streams.filter(s=>s.kind!=='flowline'),'streams',600); addLinear(META.roads,'roads',800);
+  // real photos: one marker per cluster of photo locations
+  const clusters=[]; for (const ph of PHOTOS_ALL){ let c=clusters.find(q=>Math.hypot(q.x-ph.x,q.z-ph.z)<8); if(!c){ c={x:ph.x,z:ph.z,n:0,items:[]}; clusters.push(c);} c.n++; c.items.push(ph); }
+  for (const c of clusters) labelDefs.push({name:c.n>1?String(c.n):'', cat:'photos', x:c.x, z:c.z, lift:2.5, cluster:c});
 }
 const spriteCache=new Map();   // def -> sprite
 function spriteFor(d){
@@ -321,7 +325,7 @@ function updateLabels(){
   const keep=new Set();
   for (const [dist,d] of show){ const s=spriteFor(d); keep.add(s); s.visible=true; s.userData.last=labelTick;
     const x=Math.round(d.x), z=Math.round(d.z); s.position.set(d.x, hAt(x,z)+d.lift, d.z);
-    const k=Math.min(Math.max(1.2, camera.position.distanceTo(s.position)*CATS[d.cat].size), 400); s.scale.set(k*8, k, 1); }
+    const k=Math.min(Math.max(CATS[d.cat].min||1.2, camera.position.distanceTo(s.position)*CATS[d.cat].size), 400); s.scale.set(k*8, k, 1); }
   for (const [d,s] of spriteCache){ if (!keep.has(s)){ s.visible=false; if (labelTick-s.userData.last>600){ scene.remove(s); s.material.map.dispose(); s.material.dispose(); spriteCache.delete(d); } } }
 }
 // toggle panel (N)
@@ -334,6 +338,29 @@ function buildLabelPanel(){
   lpanel.querySelectorAll('input').forEach(i=>i.onchange=()=>{ catOn[i.dataset.k]=i.checked; try{localStorage.setItem('bsp_labels',JSON.stringify(catOn));}catch(e){} });
 }
 function toggleLabelPanel(v){ lpanelOpen=v===undefined?!lpanelOpen:v; lpanel.style.display=lpanelOpen?'block':'none'; if(lpanelOpen) document.exitPointerLock(); else canvas.requestPointerLock(); }
+// Back of the Baxter Peak sign: a small note from the people who built this, with a QR code to steadystatehealth.com
+const EGG_URL='https://www.steadystatehealth.com';
+const QR=['1fd7d47f','104ce341','17444d5d','175e055d','17570c5d','105c1641','1fd5557f','0011b800','11748bf9','1f85d4ff','1ed81cf1','01bf4d1b','0ef2ea82','179604df','0674e95d','0431aec3','13edaaa2','16b5fc7b','066c2d55','052b4843','1c79e9f9','001f3111','1fdaef5d','104a9b11','17558bf8','17447fa1','174b7a8f','104c89db','1fd7edb2'];
+let eggSign=null;
+function nearEgg(){ if(!eggSign) return false; const dx=eggSign.x-player.x, dz=eggSign.z-player.z; return Math.hypot(dx,dz)<7 && Math.abs(player.y-(hAt(Math.floor(eggSign.x),Math.floor(eggSign.z))))<6; }
+function signBackCanvas(){
+  const c=document.createElement('canvas'); c.width=1024; c.height=512; const g=c.getContext('2d');
+  g.fillStyle='#5a3d22'; g.fillRect(0,0,1024,512); g.fillStyle='#4a3019'; for(let i=0;i<8;i++) g.fillRect(0,i*64+58,1024,6);
+  g.strokeStyle='#e8d8b0'; g.lineWidth=10; g.strokeRect(24,24,976,464);
+  // QR on the right
+  const N=QR.length, cell=11, size=N*cell, qx=1024-64-size-16, qy=(512-size)/2;
+  g.fillStyle='#f3e7c6'; g.fillRect(qx-16,qy-16,size+32,size+32); g.fillStyle='#2a1a0c';
+  for (let r=0;r<N;r++){ const bits=parseInt(QR[r],16); for (let k=0;k<N;k++) if (bits & (1<<(N-1-k))) g.fillRect(qx+k*cell, qy+r*cell, cell, cell); }
+  // text on the left
+  const tx=64, tw=qx-16-tx-40; g.fillStyle='#f3e7c6'; g.textAlign='left'; g.textBaseline='top';
+  g.font='bold 42px ui-monospace, Menlo, monospace'; g.fillText('THIS WORLD WAS BUILT',tx,66); g.fillText('BY STEADY STATE',tx,118);
+  g.font='28px ui-monospace, Menlo, monospace'; g.fillStyle='#e2d3ad';
+  const wrap=(t,y,lh)=>{ const words=t.split(' '); let line=''; for (const w of words){ const test=line?line+' '+w:w; if (g.measureText(test).width>tw && line){ g.fillText(line,tx,y); y+=lh; line=w; } else line=test; } if (line){ g.fillText(line,tx,y); y+=lh; } return y; };
+  g.font='26px ui-monospace, Menlo, monospace'; let y=wrap('If you’re exploring this world because you have an injury and can’t go there in real life, the physical therapists at Steady State can help.',190,33);
+  g.font='bold 30px ui-monospace, Menlo, monospace'; g.fillStyle='#ffd77a'; g.fillText('steadystatehealth.com',tx,y+18);
+  g.font='22px ui-monospace, Menlo, monospace'; g.fillStyle='#c9b98f'; g.fillText('Portland, Maine · scan, or press O here',tx,y+64);
+  return c;
+}
 function makeSign(L,x,z){
   const h=hAt(x,z); signposts.set(x+','+z,L);
   const ft=L.ele?Math.round(+L.ele*3.28084):Math.round((h*BLOCK_M+BASE_M)*3.28084);
@@ -346,10 +373,12 @@ function makeSign(L,x,z){
   const sizes=[86,64,44,44]; let y=120; lines.forEach((t,i)=>{ g.font='bold '+(sizes[i]||44)+'px ui-monospace, Menlo, monospace'; g.fillText(t,512,y); y+=i===0?110:(i===1?95:60); });
   const mat=new THREE.MeshLambertMaterial({map:new THREE.CanvasTexture(c)}); const grp=new THREE.Group(); grp.position.set(x+0.5,h+2.7,z+0.5);
   const f=new THREE.Mesh(new THREE.PlaneGeometry(2.6,1.3),mat); f.position.z=0.03; grp.add(f);
-  const bk=new THREE.Mesh(new THREE.PlaneGeometry(2.6,1.3),mat); bk.position.z=-0.03; bk.rotation.y=Math.PI; grp.add(bk);
+  const bmat = /baxter/i.test(L.name) ? new THREE.MeshLambertMaterial({map:new THREE.CanvasTexture(signBackCanvas())}) : mat;
+  const bk=new THREE.Mesh(new THREE.PlaneGeometry(2.6,1.3),bmat); bk.position.z=-0.03; bk.rotation.y=Math.PI; grp.add(bk);
+  if (/baxter/i.test(L.name)) eggSign={x:x+0.5, z:z+0.5, grp};
   const dirs=[[1,0],[-1,0],[0,1],[0,-1]]; let best=dirs[0],bh=1e9; for (const d of dirs){ const hh=hAt(x+d[0]*4,z+d[1]*4); if(hh<bh){bh=hh;best=d;} }
   grp.rotation.y=Math.atan2(best[0],best[1]); scene.add(grp);
-  const post=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.7,0.16),new THREE.MeshLambertMaterial({color:0x6a4a2a})); post.position.set(x+0.5,h+2.35,z+0.5); scene.add(post);
+  const post=new THREE.Mesh(new THREE.BoxGeometry(0.16,2.1,0.16),new THREE.MeshLambertMaterial({color:0x6a4a2a})); post.position.set(x+0.5,h+1.0,z+0.5); scene.add(post);
 }
 
 // ---------- player ---------------------------------------------------------------------------
@@ -458,7 +487,7 @@ function updateHUD(){
   const px=Math.floor(player.x), pz=Math.floor(player.z); const under=tAt(px,pz); let onTrail='';
   if (under===T.TRAIL||under===T.ROAD){ let best=null,bd=1e9; for (const tr of (under===T.ROAD?META.roads:META.trails)) for (const p of tr.pts){ const d=(p[0]-player.x)**2+(p[1]-player.z)**2; if(d<bd){bd=d;best=tr;} } onTrail=best&&best.name?'  ·  on '+best.name:'  ·  on '+(under===T.ROAD?'road':'trail'); }
   const zone = inCore(px,pz) ? '' : '  ·  outside the 3 m core (smooth terrain)';
-  hud.innerHTML=`<b>${elev.toFixed(0)} m</b>  (${(elev*3.28084).toFixed(0)} ft)\n${lat.toFixed(5)}, ${lon.toFixed(5)}\n${near?near.name+'  '+(nd<1000?nd.toFixed(0)+' m':(nd/1000).toFixed(2)+' km'):''}\n${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}  ${player.fly?'flying':'walking'}${onTrail}${zone}  ·  ${season} (Y)  ${fps} fps\n${hoverText?'<span style="color:#ffd27a">'+hoverText+'</span>\n':''}<span style="opacity:.6">${HOTBAR[player.hot].n} selected · blocks to ${(VIEW_R*CH*BLOCK_M/1000).toFixed(1)} km (−/=) · ${chunks.size} chunks · ${[...tiles.values()].filter(t=>t.state==='ready').length} tiles</span>`;
+  hud.innerHTML=`<b>${elev.toFixed(0)} m</b>  (${(elev*3.28084).toFixed(0)} ft)\n${lat.toFixed(5)}, ${lon.toFixed(5)}\n${near?near.name+'  '+(nd<1000?nd.toFixed(0)+' m':(nd/1000).toFixed(2)+' km'):''}\n${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}  ${player.fly?'flying':'walking'}${onTrail}${zone}  ·  ${season} (Y)  ${fps} fps\n${hoverText?'<span style="color:#ffd27a">'+hoverText+'</span>\n':''}${nearEgg()?'<span style="color:#ffd77a">O: open steadystatehealth.com</span>\n':''}<span style="opacity:.6">${HOTBAR[player.hot].n} selected · blocks to ${(VIEW_R*CH*BLOCK_M/1000).toFixed(1)} km (−/=) · ${chunks.size} chunks · ${[...tiles.values()].filter(t=>t.state==='ready').length} tiles</span>`;
 }
 
 // ---------- sky ------------------------------------------------------------------------------
@@ -545,7 +574,7 @@ function groundHit(maxD){ const ox=camera.position.x,oy=camera.position.y,oz=cam
     prev=t; step=Math.max(2,t*0.03); } return null; }
 // Dijkstra between two points on the graph (each given as edge+vertex index)
 function routeBetween(A,B){
-  const ea=graph.edges[A.eid], eb=graph.edges[B.eid]; if (A.eid===B.eid){ const c=edgeCum(ea); const i0=Math.min(A.j,B.j), i1=Math.max(A.j,B.j); return {pts:ea.pts.slice(i0,i1+1), len:c[i1]-c[i0], names:[ea.name]}; }
+  const ea=graph.edges[A.eid], eb=graph.edges[B.eid]; if (A.eid===B.eid){ const c=edgeCum(ea); const i0=Math.min(A.j,B.j), i1=Math.max(A.j,B.j); const seg=ea.pts.slice(i0,i1+1); if (A.j>B.j) seg.reverse(); return {pts:seg, len:c[i1]-c[i0], names:[ea.name]}; }
   const ca=edgeCum(ea), cb=edgeCum(eb); const dist=new Map(), prev=new Map(); const pq=[];
   const push=(n,d,via)=>{ if (dist.has(n)&&dist.get(n)<=d) return; dist.set(n,d); prev.set(n,via); pq.push([d,n]); };
   push(ea.a, ca[A.j], {start:true,eid:A.eid,fromEnd:'a'}); push(ea.b, ca[ca.length-1]-ca[A.j], {start:true,eid:A.eid,fromEnd:'b'});
@@ -563,7 +592,17 @@ function routeBetween(A,B){
   const endSeg = bestEnd.end==='a' ? eb.pts.slice(0,B.j+1) : eb.pts.slice(B.j).reverse(); pts.push(...endSeg.slice(1)); if (names[names.length-1]!==eb.name) names.push(eb.name);
   return {pts, len:bestD, names};
 }
-function elevProfile(pts){ let gain=0, loss=0, prevH=null; for (let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/400))){ const h=lodH(pts[i][0],pts[i][1])*BLOCK_M; if (prevH!==null){ const d=h-prevH; if (d>0) gain+=d; else loss-=d; } prevH=h; } return {gain,loss}; }
+// gain/loss along a polyline, sampled every ~15 m along the path with 3 m hysteresis (like a GPS watch) so lidar noise doesn't inflate the totals
+function elevProfile(pts){
+  const hs=[]; let acc=0;
+  for (let i=0;i<pts.length;i++){ if (i>0) acc+=Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]); if (i===0||i===pts.length-1||acc>=5){ acc=0; hs.push(lodH(pts[i][0],pts[i][1])*BLOCK_M); } }
+  let gain=0, loss=0; if (!hs.length) return {gain,loss};
+  let ref=hs[0], dir=0, ext=hs[0]; const HYS=3;
+  for (let k=1;k<hs.length;k++){ const h=hs[k];
+    if (dir>=0){ if (h>ext) ext=h; else if (ext-h>HYS){ gain+=ext-ref; ref=ext; dir=-1; ext=h; } }
+    if (dir<0){ if (h<ext) ext=h; else if (h-ext>HYS){ loss+=ref-ext; ref=ext; dir=1; ext=h; } } }
+  if (dir>=0) gain+=Math.max(0,ext-ref); else loss+=Math.max(0,ref-ext);
+  return {gain,loss}; }
 
 // ---------- route state & drawing -------------------------------------------------------------------
 const route={waypoints:[], legs:[], mesh:null, markers:[], total:0, hidden:false};
@@ -620,9 +659,46 @@ function updateHover(){
   hoverText=`${e.name}   ◂ ${fmtDist(dA)} to ${na.name||'junction'}   ·   ${fmtDist(dB)} to ${nb.name||'junction'} ▸`;
 }
 
+
+// ---------- real photos (Wikimedia Commons, geotagged) ----------------------------------------------
+// data/photos.js: [{x,z (block coords), lat, lon, hdg (deg, view direction or null), pano, cap, date, thumb, full, by, lic, page}]
+const PHOTOS_ALL=(window.PHOTOS||[]).slice();
+const ppanel=document.getElementById('photos'), pview=document.getElementById('pview');
+let nearPhotos=[], shownIds='', pviewOpen=false, pviewIdx=0;
+const COMPASS16=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+function bearingTo(ph){ return (Math.atan2(ph.x-player.x, -(ph.z-player.z))*180/Math.PI+360)%360; }   // 0=N (−z), 90=E (+x)
+function playerHeading(){ return ((-player.yaw)*180/Math.PI+360)%360; }
+function fmtM(b){ const m=b*BLOCK_M; return m<1000?Math.round(m)+' m':(m/1000).toFixed(1)+' km'; }
+function updatePhotos(){
+  if (!catOn.photos || !PHOTOS_ALL.length){ if (ppanel.style.display!=='none'){ ppanel.style.display='none'; shownIds=''; } nearPhotos=[]; return; }
+  const agl=Math.max(0, player.y-lodH(player.x,player.z)); const R=100+agl*2;      // ~300 m on the ground, farther when flying
+  const hd=playerHeading(); const c=[];
+  for (const ph of PHOTOS_ALL){ const d=Math.hypot(ph.x-player.x, ph.z-player.z); if (d>R) continue;
+    let score=d; if (ph.hdg!=null){ let a=Math.abs(ph.hdg-hd); if(a>180)a=360-a; score+=a*0.35; } else score+=25;   // prefer photos looking the way you look
+    c.push([score,d,ph]); }
+  c.sort((a,b)=>a[0]-b[0]); nearPhotos=c.slice(0,4).map(e=>e[2]);
+  const ids=nearPhotos.map(p=>p.id).join(',');
+  if (ids!==shownIds){ shownIds=ids;
+    if (!nearPhotos.length){ ppanel.style.display='none'; return; }
+    let html='<h3>📷 Real photos here <span>V: fullscreen · N: hide</span></h3>';
+    nearPhotos.forEach((ph,i)=>{ html+=`<div class="ph" data-i="${i}"><img src="${ph.thumb}" loading="lazy" alt=""><div class="cap">${ph.cap}</div><div class="meta"><span class="arrow" data-id="${ph.id}">➤</span> <span class="d"></span>${ph.hdg!=null?' · looking '+COMPASS16[Math.round(ph.hdg/22.5)%16]:''}${ph.pano?' · panorama':''}</div></div>`; });
+    ppanel.innerHTML=html; ppanel.style.display='block';
+    ppanel.querySelectorAll('.ph').forEach(el=>el.onclick=()=>openPhoto(+el.dataset.i)); }
+  // live distance + direction arrows
+  ppanel.querySelectorAll('.ph').forEach((el,i)=>{ const ph=nearPhotos[i]; if(!ph) return; const d=Math.hypot(ph.x-player.x, ph.z-player.z); el.querySelector('.d').textContent=d<3?'you are here':fmtM(d)+' away';
+    const rel=(bearingTo(ph)-hd+360)%360; el.querySelector('.arrow').style.transform=`rotate(${rel-90}deg)`; el.querySelector('.arrow').style.opacity=d<3?0:1; });
+}
+function openPhoto(i){ if (!nearPhotos.length) return; pviewIdx=Math.max(0,Math.min(nearPhotos.length-1,i||0)); pviewOpen=true; renderPhotoView(); pview.style.display='flex'; document.exitPointerLock(); }
+function closePhoto(){ pviewOpen=false; pview.style.display='none'; canvas.requestPointerLock(); }
+function renderPhotoView(){ const ph=nearPhotos[pviewIdx]; if(!ph) return;
+  pview.innerHTML=`<img src="${ph.full}" alt=""><div class="pcap"><b>${ph.cap}</b><br><span>${ph.date?ph.date+' · ':''}${ph.hdg!=null?'looking '+COMPASS16[Math.round(ph.hdg/22.5)%16]+' · ':''}${ph.lat.toFixed(5)}, ${ph.lon.toFixed(5)} · photo by ${ph.by} · ${ph.lic} · <a href="${ph.page}" target="_blank" rel="noopener">Wikimedia Commons</a></span><br><span class="hint">← → next photo nearby (${pviewIdx+1}/${nearPhotos.length}) · Esc or V to close</span></div><div class="pclose">✕</div>`;
+  pview.querySelector('.pclose').onclick=closePhoto; pview.querySelector('img').onclick=closePhoto; }
+
 // ---------- input ------------------------------------------------------------------------------
 const intro=document.getElementById('intro'); let running=false; let tpIdx=-1;
 addEventListener('keydown',e=>{
+  if (pviewOpen){ if (e.code==='Escape'||e.code==='KeyV'){ closePhoto(); } else if (e.code==='ArrowRight'){ pviewIdx=(pviewIdx+1)%nearPhotos.length; renderPhotoView(); } else if (e.code==='ArrowLeft'){ pviewIdx=(pviewIdx+nearPhotos.length-1)%nearPhotos.length; renderPhotoView(); } e.preventDefault(); return; }
+  if (e.code==='KeyV'){ if (nearPhotos.length) openPhoto(0); else flash(catOn.photos?'no real photos within range — look for 📷 markers':'photos are hidden — turn them on with N'); return; }
   if (e.code==='KeyN'){ toggleLabelPanel(); return; }
   if (e.code==='KeyP'){ toggleRoute(); return; }
   if (e.code==='KeyE' && !routeMode && document.pointerLockElement===canvas){ placeBlock(); return; }
@@ -637,6 +713,7 @@ addEventListener('keydown',e=>{
   if (e.code==='ShiftLeft'||e.code==='ShiftRight'){ const n=performance.now();
     if (player.fly && !e.repeat && n-lastShift<260){ player.fly=false; player.vy=0; flash('landing'); }
     if (!e.repeat) lastShift=n; }
+  if (e.code==='KeyO' && nearEgg()){ window.open(EGG_URL,'_blank','noopener'); return; }
   if (e.code==='KeyF'){ player.fly=!player.fly; player.vy=0; flash(player.fly?'flying':'walking'); }
   if (e.code.startsWith('Digit')){ const d=+e.code.slice(5); if(d>=1&&d<=HOTBAR.length){ player.hot=d-1; buildHotbar(); } }
   if (e.code==='BracketLeft') dayT=(dayT-0.02+1)%1; if (e.code==='BracketRight') dayT=(dayT+0.02)%1;
@@ -648,7 +725,7 @@ addEventListener('keydown',e=>{
 addEventListener('keyup',e=>{ keys[e.code]=false; });
 document.addEventListener('mousemove',e=>{ if(document.pointerLockElement!==canvas) return; player.yaw-=e.movementX*0.0022; player.pitch-=e.movementY*0.0022; player.pitch=Math.max(-1.55,Math.min(1.55,player.pitch)); });
 canvas.addEventListener('mousedown',e=>{
-  if (document.pointerLockElement!==canvas){ if(!listOpen) canvas.requestPointerLock(); return; }
+  if (document.pointerLockElement!==canvas){ if(!listOpen&&!pviewOpen) canvas.requestPointerLock(); return; }
   if (routeMode){ routeClick(e.button); return; }
   if (e.button===0){ const hit=raycast(8); if(hit) setBlock(hit.x,hit.y,hit.z,T.AIR); }
   else if (e.button===2) placeBlock();
@@ -658,7 +735,7 @@ function placeBlock(){ const hit=raycast(8); if(!hit) return; const px=hit.x+hit
   if(!inP&&typeAt(px,py,pz)===T.AIR) setBlock(px,py,pz,HOTBAR[player.hot].t); }
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 addEventListener('wheel',e=>{ if (routeMode && rpanel.style.display!=='none'){ rpanel.scrollTop += e.deltaY; } }, {passive:true});
-document.addEventListener('pointerlockchange',()=>{ if(document.pointerLockElement!==canvas){ if(!listOpen&&!lpanelOpen) intro.style.display='flex'; } else intro.style.display='none'; });
+document.addEventListener('pointerlockchange',()=>{ if(document.pointerLockElement!==canvas){ if(!listOpen&&!lpanelOpen&&!pviewOpen) intro.style.display='flex'; } else intro.style.display='none'; });
 intro.addEventListener('click',()=>{ if(running) canvas.requestPointerLock(); });
 
 function spawn(){ const bax=META.landmarks.find(l=>/^Baxter Peak$/i.test(l.name)); const pam=META.landmarks.find(l=>/^Pamola$/i.test(l.name));
@@ -679,7 +756,7 @@ function frame(){
   pumpQueue(queue.length>60?14:7);
   camera.position.set(player.x,player.y+EYE,player.z); camera.rotation.set(0,0,0); camera.rotateY(player.yaw); camera.rotateX(player.pitch);
   const hit=document.pointerLockElement===canvas?raycast(8):null; if(hit){hl.visible=true;hl.position.set(hit.x+0.5,hit.y+0.5,hit.z+0.5);} else hl.visible=false;
-  updateLabels(); if ((labelTick&3)===0) updateHover();
+  updateLabels(); if ((labelTick&3)===0) updateHover(); if ((labelTick&7)===0) updatePhotos();
   for (const m of route.markers){ const k=Math.min(Math.max(1.2, camera.position.distanceTo(m.position)*0.05), 300)*m.userData.base; m.scale.set(k*4,k,1); }
   if (flashT && performance.now()-flashT>2200){ flashEl.style.opacity=0; flashT=0; }
   { const d=heading(); compassEl.innerHTML=`<b>${DIRS[Math.round(d/22.5)%16]}</b> ${Math.round(d).toString().padStart(3,'0')}°`+(player.fly?`  ·  fly ${Math.round(Math.hypot(player.vx,player.vz)*BLOCK_M*3.6)} km/h`:''); }
@@ -702,6 +779,6 @@ function frame(){
   load.textContent='streaming the summit…';
   const t0=performance.now(); while (performance.now()-t0<12000){ updateChunks(player.x,player.z); pumpQueue(200); await new Promise(r=>setTimeout(r,30)); if (chunks.size>60) break; }
   load.textContent='ready'; running=true; last=performance.now(); frame();
-  window.__game={player,chunks,tiles,spawn,placeOnTop,goTo,raycast,typeAt,hAt,tAt,lodH,META,setDay:t=>{dayT=t;},updateChunks,pumpQueue,graph,routeClick,route,nearestTrailPoint,groundHit,setSeason:s=>{season=s; for (const k of chunks.keys()) dirty.add(k); updateChunks(player.x,player.z);},get season(){return season;}};
+  window.__game={player,chunks,tiles,spawn,placeOnTop,goTo,raycast,typeAt,hAt,tAt,lodH,META,setDay:t=>{dayT=t;},updateChunks,pumpQueue,graph,routeClick,route,nearestTrailPoint,groundHit,__rebuild:rebuildRoute,elevProfile,get nearPhotos(){return nearPhotos;},get eggSign(){return eggSign;},setSeason:s=>{season=s; for (const k of chunks.keys()) dirty.add(k); updateChunks(player.x,player.z);},get season(){return season;}};
 })();
 })();

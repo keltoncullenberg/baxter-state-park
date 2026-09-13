@@ -43,6 +43,20 @@
   #route .tot.top{position:sticky;top:-14px;background:rgba(8,14,26,.98);margin:-4px -16px 6px;padding:6px 16px 8px;border-top:0;border-bottom:1px solid rgba(255,255,255,.15)}
   #route li{margin:2px 0;font-size:12px}
   #route .tot{border-top:1px solid rgba(255,255,255,.15);padding-top:8px;margin:8px 0 0}
+  #photos{display:none;position:fixed;right:14px;top:290px;width:224px;max-height:calc(100vh - 310px);overflow:hidden;z-index:5;font-size:11px}
+  #photos h3{margin:0 0 6px;font-size:12px;color:#fff;text-shadow:0 1px 2px #000}
+  #photos h3 span{display:block;font-weight:400;opacity:.65;font-size:10px}
+  #photos .ph{background:rgba(8,14,26,.85);border:1px solid rgba(255,255,255,.25);border-radius:8px;overflow:hidden;margin-bottom:8px;cursor:pointer;pointer-events:auto}
+  #photos .ph:hover{border-color:#ffd77a}
+  #photos .ph img{display:block;width:100%;height:120px;object-fit:cover;background:#222}
+  #photos .cap{padding:5px 8px 2px;line-height:1.3;max-height:44px;overflow:hidden}
+  #photos .meta{padding:0 8px 6px;opacity:.7}
+  #photos .arrow{display:inline-block;color:#ffd77a;transition:transform .2s}
+  #pview{display:none;position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:30;flex-direction:column;align-items:center;justify-content:center}
+  #pview img{max-width:100vw;max-height:calc(100vh - 90px);object-fit:contain;cursor:zoom-out}
+  #pview .pcap{position:fixed;left:0;right:0;bottom:0;padding:12px 20px;background:rgba(0,0,0,.7);font-size:13px;line-height:1.5;text-align:center}
+  #pview .pcap span{opacity:.75;font-size:12px} #pview .pcap .hint{opacity:.5;font-size:11px} #pview a{color:#ffd77a}
+  #pview .pclose{position:fixed;right:18px;top:12px;font-size:26px;cursor:pointer;opacity:.7} #pview .pclose:hover{opacity:1}
   #load{position:fixed;left:50%;bottom:60px;transform:translateX(-50%);font-size:12px;opacity:.7}
   #list{display:none;position:fixed;inset:40px;background:rgba(8,14,26,.94);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:18px 24px;overflow:auto;z-index:20;font-size:13px}
   #list h3{margin:0 0 12px;color:#ffd77a}
@@ -61,12 +75,14 @@
 <div id="cross"></div>
 <canvas id="map" width="220" height="220"></canvas>
 <div id="compass"></div>
-<div id="mapcap">N ↑ · NAIP imagery · M: zoom · L: places</div>
+<div id="mapcap">N ↑ · NAIP imagery · M: zoom · L: places · V: photos</div>
 <div id="hot"></div>
 <div id="flash"></div>
 <div id="list"></div>
 <div id="labels"></div>
 <div id="route"></div>
+<div id="photos"></div>
+<div id="pview"></div>
 <div id="intro">
   <h1>BAXTER STATE PARK</h1>
   <h2>The whole park as a 3 m block world — Katahdin and the Knife Edge, the Brothers and Coe, Doubletop, the Traveler range, the Turners, every pond, stream, trail and campground — built from USGS lidar and aerial imagery.</h2>
@@ -77,13 +93,14 @@
     <b>Click</b><span>break block</span> <b>E</b><span>place block</span>
     <b>1–7</b><span>choose block</span> <b>L</b><span>list of places — teleport anywhere</span>
     <b>T</b><span>next peak</span> <b>R</b><span>back to Baxter Peak</span>
-    <b>N</b><span>choose which labels show (peaks, ponds, streams, trails, camps…)</span>
+    <b>N</b><span>choose which labels show (peaks, ponds, streams, trails, camps, real photos…)</span>
+    <b>V</b><span>real photos taken where you're standing — fullscreen (← → to flip through)</span>
     <b>P</b><span>route planner — click trails to measure distances (U undo · Backspace clear)</span>
-    <b>[ ]</b><span>time of day</span> <b>Y</b><span>season: summer · fall · winter · spring</span> <b>M</b><span>minimap zoom</span>
+    <b>[ ]</b><span>time of day</span> <b>Y</b><span>season: summer · fall · winter · spring</span> <b>M</b><span>minimap zoom</span> <b>O</b><span>… find the back of the Baxter Peak sign</span>
     <b>− =</b><span>block draw distance (remembered)</span>
   </div>
   <div class="go">Click to start on Baxter Peak</div>
-  <small>Every block is 3 m and the whole park is blocks — 134 million columns streamed in as you move. Beyond the loaded blocks you see the real aerial photo draped on the terrain, with every trail, road, stream, pond and campground from OpenStreetMap. Elevation: USGS 3DEP. Imagery: USDA NAIP via USGS. Map data © OpenStreetMap contributors. Rendered with three.js.</small>
+  <small>Every block is 3 m and the whole park is blocks — 134 million columns streamed in as you move. Beyond the loaded blocks you see the real aerial photo draped on the terrain, with every trail, road, stream, pond and campground from OpenStreetMap. Elevation: USGS 3DEP. Imagery: USDA NAIP via USGS. Map data © OpenStreetMap contributors. Real photos: Wikimedia Commons contributors (CC BY-SA / public domain, credited on each photo). Rendered with three.js.</small>
   <div id="load">loading…</div>
 </div>
 <script src="three.min.js"></script>
@@ -92,6 +109,7 @@
 <script src="data/tex.js"></script>
 <script src="data/tex2.js"></script>
 <script src="data/extra_names.js"></script>
+<script src="data/photos.js"></script>
 <script src="game.js"></script>
 </body>
 </html>
