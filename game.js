@@ -281,7 +281,7 @@ const KIND2CAT={peak:'peaks',water:'water',waterfall:'streams',spring:'streams',
 const labelDefs=[]; const catOn={}; for (const k in CATS) catOn[k]=k!=='roads';
 try{ const saved=JSON.parse(localStorage.getItem('bsp_labels')||'null'); if(saved) for (const k in CATS) if (k in saved) catOn[k]=!!saved[k]; }catch(e){}
 function buildLabelDefs(){
-  for (const L of META.landmarks){ const cat=KIND2CAT[L.kind]; if(!cat) continue; labelDefs.push({name:L.name, cat, x:L.x, z:L.y, lift: L.kind==='peak'?5:4, L}); }
+  for (const L of META.landmarks){ const cat=KIND2CAT[L.kind]; if(!cat) continue; if (/Appalachian National Scenic Trailhead/i.test(L.name)) continue; labelDefs.push({name:L.name, cat, x:L.x, z:L.y, lift: L.kind==='peak'?5:4, L}); }
   // linear features: one label per ~spacing of length, deduped by name
   const placed=[];
   const addLinear=(list, cat, spacing)=>{
@@ -347,36 +347,37 @@ const EGG_URL='https://www.steadystatehealth.com';
 const QR=['1fd7d47f','104ce341','17444d5d','175e055d','17570c5d','105c1641','1fd5557f','0011b800','11748bf9','1f85d4ff','1ed81cf1','01bf4d1b','0ef2ea82','179604df','0674e95d','0431aec3','13edaaa2','16b5fc7b','066c2d55','052b4843','1c79e9f9','001f3111','1fdaef5d','104a9b11','17558bf8','17447fa1','174b7a8f','104c89db','1fd7edb2'];
 let eggSign=null;
 function nearEgg(){ if(!eggSign) return false; const dx=eggSign.x-player.x, dz=eggSign.z-player.z; return Math.hypot(dx,dz)<7 && Math.abs(player.y-(hAt(Math.floor(eggSign.x),Math.floor(eggSign.z))))<6; }
-function signBackCanvas(){
-  const c=document.createElement('canvas'); c.width=1024; c.height=512; const g=c.getContext('2d');
-  g.fillStyle='#5a3d22'; g.fillRect(0,0,1024,512); g.fillStyle='#4a3019'; for(let i=0;i<8;i++) g.fillRect(0,i*64+58,1024,6);
-  g.strokeStyle='#e8d8b0'; g.lineWidth=10; g.strokeRect(24,24,976,464);
-  // QR on the right
-  const N=QR.length, cell=11, size=N*cell, qx=1024-64-size-16, qy=(512-size)/2;
-  g.fillStyle='#f3e7c6'; g.fillRect(qx-16,qy-16,size+32,size+32); g.fillStyle='#2a1a0c';
-  for (let r=0;r<N;r++){ const bits=parseInt(QR[r],16); for (let k=0;k<N;k++) if (bits & (1<<(N-1-k))) g.fillRect(qx+k*cell, qy+r*cell, cell, cell); }
-  // text on the left
-  const tx=64, tw=qx-16-tx-40; g.fillStyle='#f3e7c6'; g.textAlign='left'; g.textBaseline='top';
-  g.font='bold 42px ui-monospace, Menlo, monospace'; g.fillText('THIS WORLD WAS BUILT',tx,66); g.fillText('BY STEADY STATE',tx,118);
-  g.font='28px ui-monospace, Menlo, monospace'; g.fillStyle='#e2d3ad';
-  const wrap=(t,y,lh)=>{ const words=t.split(' '); let line=''; for (const w of words){ const test=line?line+' '+w:w; if (g.measureText(test).width>tw && line){ g.fillText(line,tx,y); y+=lh; line=w; } else line=test; } if (line){ g.fillText(line,tx,y); y+=lh; } return y; };
-  g.font='26px ui-monospace, Menlo, monospace'; let y=wrap('If you’re exploring this world because you have an injury and can’t go there in real life, the physical therapists at Steady State can help.',190,33);
-  g.font='bold 30px ui-monospace, Menlo, monospace'; g.fillStyle='#ffd77a'; g.fillText('steadystatehealth.com',tx,y+18);
-  g.font='22px ui-monospace, Menlo, monospace'; g.fillStyle='#c9b98f'; g.fillText('Portland, Maine · scan, or press O here',tx,y+64);
-  return c;
+// The real Baxter Peak sign as it stands today: dark weathered board, white routed hand lettering, two grey posts
+const SIGN_FONT='"Futura", "Avenir Next Condensed", "Gill Sans", "Trebuchet MS", "Arial Narrow", sans-serif';
+function woodBoard(g,W,H){
+  g.fillStyle='#4a3626'; g.fillRect(0,0,W,H);
+  for (let i=0;i<260;i++){ const y=Math.random()*H, x=Math.random()*W, l=40+Math.random()*300; g.strokeStyle=`rgba(${Math.random()<0.5?20:90},${Math.random()<0.5?12:64},${Math.random()<0.5?8:44},${0.08+Math.random()*0.18})`; g.lineWidth=1+Math.random()*2; g.beginPath(); g.moveTo(x,y); g.lineTo(x+l,y+(Math.random()-0.5)*3); g.stroke(); }
+  for (let i=0;i<900;i++){ g.fillStyle=`rgba(${120+Math.random()*80},${100+Math.random()*60},${80+Math.random()*40},${Math.random()*0.10})`; g.fillRect(Math.random()*W,Math.random()*H,2+Math.random()*3,1+Math.random()*2); }
+  g.strokeStyle='rgba(0,0,0,0.45)'; g.lineWidth=3; for (const y of [H*0.36,H*0.62]){ g.beginPath(); g.moveTo(0,y); g.lineTo(W,y); g.stroke(); }
+  for (const [bx,by] of [[34,44],[W-34,44],[34,H-40],[W-34,H-40],[34,H*0.5],[W-34,H*0.5]]){ g.fillStyle='#7a7f7a'; g.beginPath(); g.arc(bx,by,7,0,Math.PI*2); g.fill(); g.fillStyle='#4a4d4a'; g.beginPath(); g.arc(bx+2,by+2,3,0,Math.PI*2); g.fill(); }
 }
-// The real Baxter Peak sign, line for line (elevation 5267 ft as painted on the sign; distances as on the current sign)
+function routed(g,text,x,y,size,align,weight){ g.font=(weight||'500')+' '+size+'px '+SIGN_FONT; g.textAlign=align||'center'; g.textBaseline='middle'; try{ g.letterSpacing=Math.round(size*0.08)+'px'; }catch(e){}
+  g.fillStyle='rgba(0,0,0,0.35)'; g.fillText(text,x+2,y+2); g.fillStyle='#f2efe6'; g.fillText(text,x,y); }
 function baxterSignFront(c){
-  const g=c.getContext('2d'); g.fillStyle='#5a3d22'; g.fillRect(0,0,1024,512); g.fillStyle='#4a3019'; for(let i=0;i<8;i++) g.fillRect(0,i*64+58,1024,6);
-  g.strokeStyle='#e8d8b0'; g.lineWidth=10; g.strokeRect(24,24,976,464); g.fillStyle='#f3e7c6'; g.textAlign='center'; g.textBaseline='middle';
-  g.font='bold 92px ui-monospace, Menlo, monospace'; g.fillText('KATAHDIN',512,92);
-  g.font='bold 38px ui-monospace, Menlo, monospace'; g.fillText('BAXTER PEAK - ELEVATION - 5267 FT.',512,164);
-  g.font='bold 30px ui-monospace, Menlo, monospace'; g.fillText('NORTHERN TERMINUS OF THE APPALACHIAN TRAIL',512,212);
-  g.font='21px ui-monospace, Menlo, monospace'; g.fillText('A MOUNTAIN FOOTPATH EXTENDING OVER 2000 MILES TO SPRINGER MTN. GEORGIA',512,250);
-  const rows=[['THOREAU SPRING','1.0 M.'],['KATAHDIN STREAM CAMPGROUND','5.2'],['PENOBSCOT WEST BRANCH AT ABOL BRIDGE','15.1'],['MAINE-NEW HAMPSHIRE STATE LINE','281.4'],['MT. WASHINGTON, N.H.','332.5'],['SPRINGER MTN., GEORGIA','2178.3']];
-  g.font='bold 24px ui-monospace, Menlo, monospace'; let y=296;
-  for (const [n,d] of rows){ g.textAlign='left'; g.fillText('\u2190  '+n,72,y); g.textAlign='right'; g.fillText(d,952,y); y+=32; }
-  g.textAlign='center'; g.font='22px ui-monospace, Menlo, monospace'; g.fillStyle='#d8c8a0'; g.fillText('BAXTER STATE PARK',512,y-4);
+  c.width=1024; c.height=800; const W=1024,H=800; const g=c.getContext('2d'); woodBoard(g,W,H);
+  routed(g,'KATAHDIN',W/2,110,150,'center','500');
+  routed(g,'BAXTER PEAK',W*0.30,222,40,'center'); routed(g,'ELEVATION 5267 FT.',W*0.68,222,40,'center');
+  routed(g,'NORTHERN TERMINUS OF THE',W/2,300,42,'center'); routed(g,'APPALACHIAN TRAIL',W/2,352,46,'center');
+  const rows=[['↑','PAMOLA PEAK via KNIFE EDGE','1.1 MI.'],['↑','CHIMNEY POND CAMPGROUND via SADDLE','2.2'],['↑','ROARING BROOK CAMPGROUND via SADDLE','5.5'],['←','KATAHDIN STREAM CAMPGROUND','5.2'],['←','ABOL CAMPGROUND','4.4'],['←','SPRINGER MOUNTAIN, GEORGIA via the A.T.','2,189.1']];
+  let y=430; for (const [a,n,d] of rows){ routed(g,a,112,y,30,'center'); routed(g,n,140,y,29,'left'); routed(g,d,W-96,y,29,'right'); y+=44; }
+  routed(g,'BAXTER STATE PARK',W/2,H-52,32,'center');
+}
+function signBackCanvas(){
+  const c=document.createElement('canvas'); c.width=1024; c.height=800; const W=1024,H=800; const g=c.getContext('2d'); woodBoard(g,W,H);
+  const N=QR.length, cell=12, size=N*cell, qx=W-56-size-24, qy=H/2-size/2+40;
+  g.fillStyle='#f2efe6'; g.fillRect(qx-18,qy-18,size+36,size+36); g.fillStyle='#2a1a0c';
+  for (let r=0;r<N;r++){ const bits=parseInt(QR[r],16); for (let k=0;k<N;k++) if (bits & (1<<(N-1-k))) g.fillRect(qx+k*cell, qy+r*cell, cell, cell); }
+  routed(g,'THIS WORLD WAS BUILT BY',W/2,96,52,'center'); routed(g,'STEADY STATE',W/2,160,70,'center');
+  const tx=100, tw=qx-18-tx-30; g.font='400 30px '+SIGN_FONT; try{ g.letterSpacing='1px'; }catch(e){}
+  const wrap=(t,y,lh)=>{ const words=t.split(' '); let line=''; for (const w of words){ const test=line?line+' '+w:w; g.font='400 30px '+SIGN_FONT; if (g.measureText(test).width>tw && line){ routed(g,line,tx,y,30,'left','400'); y+=lh; line=w; } else line=test; } if (line){ routed(g,line,tx,y,30,'left','400'); y+=lh; } return y; };
+  let y=wrap('If you’re exploring this world because you have an injury and can’t go there in real life, the physical therapists at Steady State can help.',260,40);
+  routed(g,'steadystatehealth.com',tx,y+34,38,'left','500'); routed(g,'PORTLAND, MAINE · SCAN, OR PRESS O HERE',tx,y+92,24,'left','400');
+  return c;
 }
 function makeSign(L,x,z){
   const h=hAt(x,z); signposts.set(x+','+z,L);
@@ -388,16 +389,19 @@ function makeSign(L,x,z){
   g.fillStyle='#5a3d22'; g.fillRect(0,0,1024,512); g.fillStyle='#4a3019'; for(let i=0;i<8;i++) g.fillRect(0,i*64+58,1024,6);
   g.strokeStyle='#e8d8b0'; g.lineWidth=10; g.strokeRect(24,24,976,464); g.fillStyle='#f3e7c6'; g.textAlign='center'; g.textBaseline='middle';
   const sizes=[86,64,44,44]; let y=120; lines.forEach((t,i)=>{ g.font='bold '+(sizes[i]||44)+'px ui-monospace, Menlo, monospace'; g.fillText(t,512,y); y+=i===0?110:(i===1?95:60); });
-  if (/baxter/i.test(L.name)) baxterSignFront(c);
-  const mat=new THREE.MeshLambertMaterial({map:new THREE.CanvasTexture(c)}); const grp=new THREE.Group(); grp.position.set(x+0.5,h+2.7,z+0.5);
-  const f=new THREE.Mesh(new THREE.PlaneGeometry(2.6,1.3),mat); f.position.z=0.03; grp.add(f);
-  const bmat = /baxter/i.test(L.name) ? new THREE.MeshLambertMaterial({map:new THREE.CanvasTexture(signBackCanvas())}) : mat;
-  const bk=new THREE.Mesh(new THREE.PlaneGeometry(2.6,1.3),bmat); bk.position.z=-0.03; bk.rotation.y=Math.PI; grp.add(bk);
+  const isBax=/baxter/i.test(L.name); if (isBax) baxterSignFront(c);
+  const SW=isBax?2.4:2.6, SH=isBax?1.875:1.3, CY=isBax?2.6:2.7;   // board centre CY blocks above the summit block
+  const mat=new THREE.MeshLambertMaterial({map:new THREE.CanvasTexture(c)}); const grp=new THREE.Group(); grp.position.set(x+0.5,h+CY,z+0.5);
+  const f=new THREE.Mesh(new THREE.PlaneGeometry(SW,SH),mat); f.position.z=0.03; grp.add(f);
+  const bmat = isBax ? new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(signBackCanvas())}) : mat;   // unlit so the note reads even though the north face is in shade
+  const bk=new THREE.Mesh(new THREE.PlaneGeometry(SW,SH),bmat); bk.position.z=-0.03; bk.rotation.y=Math.PI; grp.add(bk);
+  if (isBax){ const pm=new THREE.MeshLambertMaterial({color:0x9a9488}); const top=CY+SH/2+0.45, len=top-1;   // grey posts from just above the ground to a little above the board
+    for (const sx of [-1,1]){ const post=new THREE.Mesh(new THREE.BoxGeometry(0.16,len,0.16),pm); post.position.set(sx*(SW/2-0.1), (1+top)/2-CY, -0.07); grp.add(post); } }
   if (/baxter/i.test(L.name)) eggSign={x:x+0.5, z:z+0.5, grp};
   const dirs=[[1,0],[-1,0],[0,1],[0,-1]]; let best=dirs[0],bh=1e9; for (const d of dirs){ const hh=hAt(x+d[0]*4,z+d[1]*4); if(hh<bh){bh=hh;best=d;} }
   if (/baxter/i.test(L.name)) best=[0,1];   // the real sign faces south: reading the 'Northern Terminus' side you look north, with Hamlin Peak behind it; the note is on its back
   grp.rotation.y=Math.atan2(best[0],best[1]); scene.add(grp);
-  const post=new THREE.Mesh(new THREE.BoxGeometry(0.16,2.1,0.16),new THREE.MeshLambertMaterial({color:0x6a4a2a})); post.position.set(x+0.5,h+1.0,z+0.5); scene.add(post);
+  if (!isBax){ const post=new THREE.Mesh(new THREE.BoxGeometry(0.16,2.1,0.16),new THREE.MeshLambertMaterial({color:0x6a4a2a})); post.position.set(x+0.5,h+1.0,z+0.5); scene.add(post); }
 }
 
 // ---------- player ---------------------------------------------------------------------------
